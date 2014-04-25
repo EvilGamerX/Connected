@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -23,6 +24,7 @@ public:
 	}
 	void addDest(Node* dest)
 	{
+		//cout << "Adding " << dest->getName() << " to " << this->getName()<< endl;
 		connectedTo.push_back(dest);
 	}
 	bool getVisited()
@@ -45,7 +47,8 @@ public:
 	}
 	bool compareTo(Node* cmp)
 	{
-		return (name == cmp->getName());
+		//cout << this->getName() << " | " << cmp->getName() << endl;
+		return !(this->getName().compare(cmp->getName()));
 	}
 	void visit()
 	{
@@ -67,12 +70,11 @@ public:
 	bool addNode(string nde, string dest)
 	{
 		bool nExist = false, dExist = false;
-		int nIndex, dIndex;
-		
-		cout << cities.size() << endl;
+		int nIndex = -1, dIndex = -1;
 		
 		if(!cities.empty())
-			for(int i = 0; i < cities.size() || (nExist && dExist); i++)
+		{
+			for(int i = 0; i < cities.size() && !(nExist && dExist); i++)
 			{
 				if(!nExist && !cities[i]->getName().compare(nde))
 				{
@@ -86,23 +88,34 @@ public:
 					dIndex = i;
 				}
 			}
-		
+		}
+
+		//cout << nIndex << " | " << dIndex << " | " << nExist << " | " << dExist << endl;
+
 		if(nExist && dExist)
 		{
+			//cout << cities[nIndex]->getName() << " | " << cities[dIndex]->getName() << endl;
 			cities[nIndex]->addDest(cities[dIndex]);
+			cities[dIndex]->addDest(cities[nIndex]);
+
+			//cout << endl << cities[nIndex]->numConnectedTo() << " | "  << cities[dIndex]->numConnectedTo() << endl;
 		}else if(nExist && !dExist)
 		{
 			cities.push_back((new Node(dest)));
-			cities[nIndex]->addDest(cities.back());
+			
+			addNode(cities[nIndex]->getName(), cities.back()->getName());
 		}else if(!nExist && dExist)
 		{
 			cities.push_back((new Node(nde)));
-			cities.back()->addDest(cities[dIndex]);
+
+			addNode(cities.back()->getName(), cities[dIndex]->getName());
 		}else
 		{
 			cities.push_back((new Node(nde)));
-			cities.back()->addDest((new Node(dest)));
-			cities.push_back(cities.back()->connectedAt(-1));
+			dIndex = cities.size();
+			cities.push_back(new Node(dest));
+			
+			addNode(cities[dIndex - 1]->getName(), cities[dIndex]->getName());
 		}
 
 		return true;
@@ -110,10 +123,10 @@ public:
 
 	bool canTravelTo(string start, string dest)
 	{
-		bool nExist, dExist, ret;
+		bool nExist = false, dExist = false, ret = false;
 		int nIndex, dIndex;
 
-		for(int i = 0, nExist = false, dExist = false; i < cities.size() || (nExist && dExist); i++)
+		for(int i = 0; i < cities.size() && !(nExist && dExist); i++)
 		{
 			if(!nExist && !cities[i]->getName().compare(start))
 			{
@@ -129,7 +142,9 @@ public:
 		}
 
 		if(nExist && dExist)
-		{
+		{ 
+			//cout << nIndex << " | " << dIndex << " | " << cities[nIndex]->getName() << endl;
+			//cout << endl << cities[nIndex]->numConnectedTo() << " | "  << cities[dIndex]->numConnectedTo() << endl;
 			ret = canTravelTo(cities[nIndex], cities[dIndex]);
 		}else
 		{
@@ -145,17 +160,29 @@ public:
 	}
 
 	bool canTravelTo(Node* start, Node* dest)
-	{
-		bool ret;
-		
+	{	
+		bool ret = false;
+
+		//cout << start->getName() << " | " << dest->getName() << endl;
+		//cout << endl << start->getName() << "=" << start->numConnectedTo() << " | "  << dest->getName() << "=" << dest->numConnectedTo() << endl;
+
+		if(!(start) || !(dest))
+		{
+			return false;
+		}
+
 		if(start->getVisited())
 		{
 			return false;
 		}
 
-		for(int i = 0, ret = false; i < start->numConnectedTo() && !ret; i++)
+		//cout << "NOT VISITED" << endl;
+		start->visit();
+		//cout << "VISITED" << endl;
+
+		for(int i = 0; i < start->numConnectedTo() && !ret; i++)
 		{
-			start->connectedAt(i)->visit();
+			//cout << i << " | " << start->numConnectedTo() << endl;
 
 			if(start->connectedAt(i)->compareTo(dest))
 			{
@@ -194,13 +221,43 @@ int main(int argc, char** argv)
 {
 	Graph roadMap = Graph();
 
-	roadMap.addNode("Whoop", "Swoop");
-	roadMap.addNode("Whoop", "Doop");
-	roadMap.addNode("Whoop", "Poop");
-	roadMap.addNode("Coop", "Doop");
-	roadMap.addNode("Loop", "Snoop");
+	if(argc != 4)
+	{
+		cout << "Please use the proper format" << endl;
+		cin.ignore();
+		exit(0);
+	}
 
-	cout << roadMap.getCities() << endl;
+
+	ifstream file(argv[1]);
+
+	if(!file.is_open())
+	{
+		cout << "ERR: Could not open file.  Please try again." << endl;
+		cin.ignore();
+		exit(0);
+	}
+
+	string buff;
+	string c1;
+	string c2;
+	int pos;
+
+	while(file.good())
+	{
+		getline(file, buff);
+
+		pos = buff.find(", ");
+		c1 = buff.substr(0, pos);
+		c2 = buff.substr(pos + string(", ").length(), buff.length());
+
+		roadMap.addNode(c1, c2);
+	}
+
+	if(roadMap.canTravelTo(argv[2], argv[3]))
+		cout << "yes" << endl;
+	else
+		cout << "no" << endl;
 
 	cin.ignore();
 
